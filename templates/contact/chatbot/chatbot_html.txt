@@ -1,0 +1,19 @@
+<iframe src="{{ url }}/{{ name }}/login" id="popup-iframe" allowtransparency="true" sandbox="allow-scripts allow-same-origin allow-top-navigation allow-forms allow-popups allow-modals allow-pointer-lock allow-popups-to-escape-sandbox"></iframe>
+{% if layout == 'window' %}
+<link rel="stylesheet" href="{{ url }}/static/css/window.css?v=1.2"></link>
+{% elif layout == 'widget' %}
+<link rel="stylesheet" href="{{ url }}/static/css/widget.css?v=1.2"></link>
+{% endif %}
+<div id="close-button" style="display: none;">&times;</div>
+<button id="chatbot-iframe" 
+        style="
+            background:{{ button_background_colour }}; 
+            color:{{ button_text_colour }};
+            {{ horizontal_position }}: {{ horizontal_percentage }}%;
+            {{ vertical_position }}: {{ vertical_percentage }}%;
+            width: max-content;
+            height: max-content;
+        ">
+    {{ button_text }}
+</button>
+<script src="{{ url }}/static/js/login.js?v=1.2"></script>

@@ -1,0 +1,5 @@
+# Libs specific to the contact application
+bcrypt
+openai
+rank-bm25
+unstructured==0.10.28
