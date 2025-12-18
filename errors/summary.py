@@ -13,15 +13,7 @@ contact_summary_create_003 = (
     'same Member as the Chatbot.'
 )
 contact_summary_create_004 = (
-    'An unknown error has occurred in the CloudCIX ChatGPT 4 ML service. Please try again later or contact'
-    'CloudCIX support if this persists. '
-)
-contact_summary_create_005 = (
-    'An unknown error has occurred in the CloudCIX UCCIX-Inststruct ML service. Please try again later or contact'
-    'CloudCIX support if this persists.'
-)
-contact_summary_create_006 = (
-    'The LLM of the Chatbot does not have a supported CloudCIX ML service. Please try again later or contact'
-    'CloudCIX support if this persists.'
+    'An unknown error has occurred in the CloudCIX OpenAI service. Please try again later or contact CloudCIX support '
+    'if this persists.'
 )
 contact_summary_create_201 = 'You do not have Permission to make this request.'

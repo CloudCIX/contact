@@ -86,7 +86,7 @@ class SummaryCollection(APIView):
                     'role': 'user',
                     'content': f'Create a title in exactly 3 words for this text: "{question}"',
                 }]
-                llm_sum = llm_summary(obj, prompt, 'contact_summary_create_004')
+                llm_sum = llm_summary(obj, prompt)
 
                 summary = ''
                 for partial_name in llm_sum:
@@ -94,8 +94,8 @@ class SummaryCollection(APIView):
                 if len(summary) > 50:  # pragma: no cover
                     summary = summary[:50]
 
-            except ContactExceptionError as e:  # pragma: no cover
-                return Http503(error_code=e.args[0])
+            except ContactExceptionError:  # pragma: no cover
+                return Http503(error_code='contact_summary_create_004')
 
         with tracer.start_span('creating_conversation', child_of=request.span):
             conversation = Conversation.objects.create(name=summary, chatbot=obj, contact_id=contact_id, cookie=cookie)

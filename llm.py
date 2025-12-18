@@ -11,7 +11,7 @@ from contact.models import QAndA
 from openai import OpenAI
 
 
-class ContactExceptionError(Exception):
+class ContactExceptionError():
     pass
 
 
@@ -25,7 +25,7 @@ LLM_DICT = {
 }
 
 
-def llm_summary(chatbot, messages, error):
+def llm_summary(chatbot, messages):
     logger = logging.getLogger('contact.llm.llm_summary')
     logger.info('LLM Summary Process Start')
     try:
@@ -49,11 +49,9 @@ def llm_summary(chatbot, messages, error):
         requests.exceptions.HTTPError,
         requests.exceptions.Timeout,
         requests.exceptions.RequestException,
-    ):  # pragma: no cover
-        logger.error(
-            'A non 200 response has occurred with the LLM Summary service.',
-        )
-        raise ContactExceptionError(error)
+    ) as e:  # pragma: no cover
+        logger.error(f'A non 200 response has occurred with the LLM Summary service.\nException: {e}')
+        raise ContactExceptionError()
     logger.info('LLM Summary Process End')
 
     for chunk in chat_completion:
@@ -62,7 +60,7 @@ def llm_summary(chatbot, messages, error):
         yield chunk.choices[0].delta.content
 
 
-def llm(chatbot, messages, error):
+def llm(chatbot, messages):
     logger = logging.getLogger('contact.llm.llm')
     logger.info('LLM Process Start')
     try:
@@ -85,14 +83,13 @@ def llm(chatbot, messages, error):
         requests.exceptions.HTTPError,
         requests.exceptions.Timeout,
         requests.exceptions.RequestException,
-    ):  # pragma: no cover
-        logger.error(
-            'A non 200 response has occurred with the LLM service.',
-        )
-        raise ContactExceptionError(error)
+    ) as e:  # pragma: no cover
+        logger.error(f'A non 200 response has occurred with the LLM service.\nException: {e}')
+        raise ContactExceptionError()
     except openai.NotFoundError:
         logger.error(
-            'The requested model was not found in the LLM service.',
+            f'The requested model {LLM_DICT[chatbot.nn_llm]} was not found in the LLM service for Chatbot '
+            f'{chatbot.name}.',
         )
         error_message = (
             'The LLM for this chatbot is deprecated. Please contact support.'

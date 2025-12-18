@@ -130,7 +130,7 @@ class AnswerCollection(APIView):
         if chatbot.apply_intent_classification:
             with tracer.start_span('classify_intent', child_of=request.span):
                 try:
-                    intent = classify_intent(chatbot, conversation, users_question, 'contact_answer_create_004')
+                    intent = classify_intent(chatbot, conversation, users_question)
                 except ContactExceptionError:  # pragma: no cover
                     return CustomStreamingHttpResponse(
                         self.streaming_error_response(),
@@ -157,7 +157,7 @@ class AnswerCollection(APIView):
                                 content_type='text/event-stream; charset=utf-8',
                             )
                         else:
-                            answer = llm(smalltalk_chatbot, prompt, 'contact_answer_create_004')
+                            answer = llm(smalltalk_chatbot, prompt)
                             return CustomStreamingHttpResponse(
                                 self.streaming_answer(answer, conversation, users_question, users_images),
                                 content_type='text/event-stream; charset=utf-8',
@@ -213,11 +213,17 @@ class AnswerCollection(APIView):
                     content_type='text/event-stream; charset=utf-8',
                 )
             if chatbot.echo is False:
-                answer = llm(chatbot, prompt, 'contact_answer_create_004')
-                return CustomStreamingHttpResponse(
-                    self.streaming_answer(answer, conversation, users_question, users_images),
-                    content_type='text/event-stream; charset=utf-8',
-                )
+                try:
+                    answer = llm(chatbot, prompt)
+                    return CustomStreamingHttpResponse(
+                        self.streaming_answer(answer, conversation, users_question, users_images),
+                        content_type='text/event-stream; charset=utf-8',
+                    )
+                except ContactExceptionError:  # pragma: no cover
+                    return CustomStreamingHttpResponse(
+                        self.streaming_error_response(),
+                        content_type='text/event-stream; charset=utf-8',
+                    )
             else:
                 answer = echo(prompt)
                 return CustomStreamingHttpResponse(
