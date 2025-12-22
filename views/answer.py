@@ -2,7 +2,6 @@
 Management for Answer
 """
 import logging
-
 # stdlib
 import sys
 from copy import deepcopy
@@ -11,7 +10,6 @@ from copy import deepcopy
 from cloudcix_rest.exceptions import Http400, Http404
 from cloudcix_rest.views import APIView
 from contact.intent import Intent, classify_intent
-
 # local
 from contact.llm import ContactExceptionError, create_prompt, echo, llm
 from contact.models import Chatbot, Conversation, QAndA
@@ -39,10 +37,17 @@ class AnswerCollection(APIView):
         logger = logging.getLogger('contact.views.answer.streaming_answer')
         logger.info('Streaming Answer Process Start')
         answer_content = ''
-        for ans in response:
-            answer_content += str(ans)
-            yield ans
+        try:
+            for ans in response:
+                answer_content += str(ans)
+                yield ans
+                sys.stdout.flush()
+        except ContactExceptionError:
+            logger = logging.getLogger('contact.views.answer.streaming_answer')
+            logger.error('LLM Error occurred while getting answer from chatbot LLM.')
+            yield 'An unknown error has occurred, please try again later.'
             sys.stdout.flush()
+            return
 
         QAndA.objects.create(
             answer=answer_content,
@@ -57,6 +62,7 @@ class AnswerCollection(APIView):
         response = ['An', 'unknown', 'error', 'has', 'occurred,', 'please', 'try', 'again', 'later.']
         for ans in response:
             yield ans
+            sys.stdout.flush()
 
     def post(self, request: Request, chatbot_name: str) -> Response:
         """
@@ -220,6 +226,8 @@ class AnswerCollection(APIView):
                         content_type='text/event-stream; charset=utf-8',
                     )
                 except ContactExceptionError:  # pragma: no cover
+                    logger = logging.getLogger('contact.views.answer.streaming_error')
+                    logger.error('LLM Error occurred while getting answer from chatbot LLM.')
                     return CustomStreamingHttpResponse(
                         self.streaming_error_response(),
                         content_type='text/event-stream; charset=utf-8',

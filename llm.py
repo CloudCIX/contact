@@ -11,7 +11,7 @@ from contact.models import QAndA
 from openai import OpenAI
 
 
-class ContactExceptionError():
+class ContactExceptionError(Exception):
     pass
 
 
