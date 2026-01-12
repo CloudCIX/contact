@@ -17,6 +17,10 @@ class ChatbotSerializer(serpy.Serializer):
         description: |
             If True, question sent to intent classification LLM.
         type: boolean
+    apply_safety_classifier:
+        description: |
+            If True, question sent to safety classification LLM.
+        type: boolean
     apply_reranking:
         description: |
             If True, chunks sent to reranker.
@@ -172,6 +176,7 @@ class ChatbotSerializer(serpy.Serializer):
     """
     api_key = serpy.Field()
     apply_intent_classification = serpy.Field()
+    apply_safety_classifier = serpy.Field()
     apply_reranking = serpy.Field()
     bm25_limit = serpy.Field()
     button_background_colour = serpy.Field()

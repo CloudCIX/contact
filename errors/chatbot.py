@@ -147,6 +147,10 @@ contact_chatbot_create_164 = 'The location to upload your "logo" to is not avail
 contact_chatbot_create_165 = (
     'The "no_reference_answer" parameter is invalid. "no_reference_answer" cannot be longer than 10000 characters.'
 )
+contact_chatbot_create_166 = (
+    'The "apply_safety_classifier" parameter is invalid. The "apply_safety_classifier" parameter must be a '
+    'boolean'
+)
 contact_chatbot_create_201 = 'You do not have permission to make this request. Your Member must be self-managed.'
 
 # Read
@@ -290,6 +294,10 @@ contact_chatbot_update_163 = 'The "logo" parameter is invalid. The value for the
 contact_chatbot_update_164 = 'The location to upload your "logo" to is not available. Please contact CloudCIX.'
 contact_chatbot_update_165 = (
     'The "no_reference_answer" parameter is invalid. "no_reference_answer" cannot be longer than 10000 characters.'
+)
+contact_chatbot_update_166 = (
+    'The "apply_safety_classifier" parameter is invalid. The "apply_safety_classifier" parameter must be a '
+    'boolean'
 )
 contact_chatbot_update_001 = 'The "pk" path parameter is invalid. "pk" must belong to a valid Chatbot record.'
 # Delete

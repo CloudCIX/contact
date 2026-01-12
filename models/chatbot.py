@@ -126,6 +126,7 @@ class Chatbot(BaseModel):
     similarity = models.CharField(choices=SIMILARITY_CHOICES, max_length=20, default=EUCLIDEAN_DISTANCE)
     system_prompt = models.CharField(max_length=10000, null=True)
     smalltalk_prompt = models.CharField(max_length=10000, null=True)
+    apply_safety_classifier = models.BooleanField(default=False)
     intent_prompt = models.CharField(max_length=10000, null=True)
     threshold = models.DecimalField(max_digits=5, decimal_places=2, default=25)
     user_prompt = models.CharField(max_length=10000, null=True)

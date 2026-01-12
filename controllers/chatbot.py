@@ -65,6 +65,7 @@ class ChatbotCreateController(ControllerBase):
         validation_order = (
             'api_key',
             'apply_intent_classification',
+            'apply_safety_classifier',
             'apply_reranking',
             'bm25_limit',
             'button_background_colour',
@@ -138,6 +139,20 @@ class ChatbotCreateController(ControllerBase):
         if not isinstance(apply_intent_classification, bool):
             return 'contact_chatbot_create_104'
         self.cleaned_data['apply_intent_classification'] = apply_intent_classification
+        return None
+
+    def validate_apply_safety_classifier(self, apply_safety_classifier: Optional[bool]) -> Optional[str]:
+        """
+        description: |
+            If True, questions are sent to safety classifier LLM.
+        required: false
+        type: boolean
+        """
+        if apply_safety_classifier is None:
+            return None
+        if not isinstance(apply_safety_classifier, bool):
+            return 'contact_chatbot_create_166'
+        self.cleaned_data['apply_safety_classifier'] = apply_safety_classifier
         return None
 
     def validate_apply_reranking(self, apply_reranking: Optional[bool]) -> Optional[str]:
@@ -781,6 +796,7 @@ class ChatbotUpdateController(ControllerBase):
         validation_order = (
             'api_key',
             'apply_intent_classification',
+            'apply_safety_classifier',
             'apply_reranking',
             'bm25_limit',
             'button_background_colour',
@@ -854,6 +870,20 @@ class ChatbotUpdateController(ControllerBase):
         if not isinstance(apply_intent_classification, bool):
             return 'contact_chatbot_update_104'
         self.cleaned_data['apply_intent_classification'] = apply_intent_classification
+        return None
+
+    def validate_apply_safety_classifier(self, apply_safety_classifier: Optional[bool]) -> Optional[str]:
+        """
+        description: |
+            If True, questions are sent to safety classifier LLM.
+        required: false
+        type: boolean
+        """
+        if apply_safety_classifier is None:
+            return None
+        if not isinstance(apply_safety_classifier, bool):
+            return 'contact_chatbot_update_166'
+        self.cleaned_data['apply_safety_classifier'] = apply_safety_classifier
         return None
 
     def validate_apply_reranking(self, apply_reranking: Optional[bool]) -> Optional[str]:

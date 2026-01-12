@@ -9,11 +9,12 @@ from copy import deepcopy
 # libs
 from cloudcix_rest.exceptions import Http400, Http404
 from cloudcix_rest.views import APIView
-from contact.intent import Intent, classify_intent
 # local
+from contact.intent import Intent, classify_intent
 from contact.llm import ContactExceptionError, create_prompt, echo, llm
 from contact.models import Chatbot, Conversation, QAndA
 from contact.permissions.answer import Permissions
+from contact.safety import classify_safety
 from contact.smalltalk import smalltalk
 from contact.utils import CustomStreamingHttpResponse
 from contact.vector import best_match_25, rerank, vector_similarity
@@ -136,6 +137,26 @@ class AnswerCollection(APIView):
 
                 return StreamingHttpResponse(
                     streaming_small_talk_answer(),
+                    content_type='application/json; charset=utf-8',
+                )
+
+        if chatbot.apply_safety_classifier:
+            with tracer.start_span('safety_classification', child_of=request.span):
+                try:
+                    is_safe = classify_safety(chatbot, users_question)
+                except ContactExceptionError:  # pragma: no cover
+                    return CustomStreamingHttpResponse(
+                        self.streaming_error_response(),
+                        content_type='text/event-stream; charset=utf-8',
+                    )
+            if not is_safe:
+                def streaming_safety_answer():
+                    safety_response = 'Your question has been flagged as unsafe and cannot be answered.'
+                    for ans in safety_response.split():
+                        yield ans + ' '
+
+                return StreamingHttpResponse(
+                    streaming_safety_answer(),
                     content_type='application/json; charset=utf-8',
                 )
 
