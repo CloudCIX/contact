@@ -48,6 +48,12 @@ class AnswerCollection(APIView):
             yield 'An unknown error has occurred, please try again later.'
             sys.stdout.flush()
             return
+        except Exception as e:  # pragma: no cover
+            logger = logging.getLogger('contact.views.answer.streaming_answer')
+            logger.error(f'An unknown error has occurred while streaming the answer. Exception: {e}')
+            yield 'An unknown error has occurred, please try again later.'
+            sys.stdout.flush()
+            return
 
         QAndA.objects.create(
             answer=answer_content,

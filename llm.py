@@ -36,7 +36,7 @@ def llm_summary(chatbot, messages):
 
         chat_completion = client.chat.completions.create(
             messages=messages,
-            model=LLM_DICT['uccix_instruct_70b'],
+            model=LLM_DICT[chatbot.nn_llm],
             stream=True,
             timeout=600,
             max_tokens=100,

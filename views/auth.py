@@ -6,13 +6,12 @@ Handling for Contact authentication
 import bcrypt
 from cloudcix_rest.exceptions import Http400, Http404
 from cloudcix_rest.views import APIView
-from django.conf import settings
-from rest_framework.response import Response
-from rest_framework.request import Request
 # local
 from contact.models import Chatbot, Contact
 from contact.permissions.auth import Permissions
-
+from django.conf import settings
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 __all__ = [
     'AuthResource',
@@ -92,5 +91,6 @@ class AuthResource(APIView):
         # Return 200 to let the user know the auth is valid
         content = {
             'contact_id': contact.pk,
+            'first_name': contact.first_name,
         }
         return Response({'content': content})
