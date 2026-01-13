@@ -1,9 +1,11 @@
 # stdlib
 from datetime import datetime
+
 # libs
 from cloudcix_rest.models import BaseModel
 from django.db import models
 from django.urls import reverse
+
 # local
 from .chatbot import Chatbot
 from .contact import Contact
@@ -35,11 +37,12 @@ class Conversation(BaseModel):
 
         indexes = [
             models.Index(fields=['created'], name='conversation_created'),
+            models.Index(fields=['updated'], name='conversation_updated'),
             models.Index(fields=['id'], name='conversation_id'),
             models.Index(fields=['name'], name='conversation_name'),
         ]
 
-        ordering = ['-created']
+        ordering = ['-updated']
 
     def get_absolute_url(self):
         """
