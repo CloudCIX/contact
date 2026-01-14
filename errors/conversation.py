@@ -26,6 +26,7 @@ contact_conversation_create_103 = (
 contact_conversation_create_104 = 'The "cookie" parameter is invalid. "cookie" cannot be longer than 50 characters.'
 contact_conversation_create_105 = 'The "name" parameter is invalid. "name" is required'
 contact_conversation_create_106 = 'The "name" parameter is invalid. "name" cannot be longer than 50 characters.'
+contact_conversation_create_107 = 'The "last_message_at" parameter is invalid. Must be a valid datetime string.'
 contact_conversation_create_201 = 'You do not have Permission to make this request.'
 
 # Read

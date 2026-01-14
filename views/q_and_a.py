@@ -4,15 +4,15 @@ Management for Q and A
 # libs
 from cloudcix_rest.exceptions import Http400, Http404
 from cloudcix_rest.views import APIView
+# local
+from contact.controllers import QAndACreateController, QAndAListController
+from contact.models import Conversation, QAndA, Reference
+from contact.permissions.q_and_a import Permissions
+from contact.serializers import QAndASerializer
 from django.conf import settings
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
-# local
-from contact.controllers import QAndAListController, QAndACreateController
-from contact.models import Conversation, QAndA, Reference
-from contact.permissions.q_and_a import Permissions
-from contact.serializers import QAndASerializer
 
 __all__ = [
     'QAndACollection',
@@ -117,6 +117,7 @@ class QAndACollection(APIView):
             403: {}
         """
         tracer = settings.TRACER
+        # logger = logging.getLogger('contact.views.q_and_a.post')
 
         with tracer.start_span('retrieving_requested_object', child_of=request.span):
             try:
@@ -141,6 +142,12 @@ class QAndACollection(APIView):
             references = controller.cleaned_data.pop('references', None)
             controller.instance.conversation = obj
             controller.instance.save()
+            controller.instance.refresh_from_db()
+            # logger.warning(f'Created QAndA {controller.instance.id} for Conversation {obj.id}')
+
+            # obj.last_message_at = getattr(controller.instance, 'created') or timezone.now()
+            # obj.save(update_fields=['last_message_at'])
+            # logger.warning(f'Updated Conversation {obj.id} last_message_at to {obj.last_message_at}')
 
         with tracer.start_span('saving_references', child_of=request.span):
             if references is not None and len(references) > 0:

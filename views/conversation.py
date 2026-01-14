@@ -7,6 +7,7 @@ from cloudcix_rest.exceptions import Http400, Http404
 from cloudcix_rest.views import APIView
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -136,6 +137,7 @@ class ConversationCollection(APIView):
 
         with tracer.start_span('saving_object', child_of=request.span):
             controller.instance.chatbot = obj
+            controller.instance.last_message_at = timezone.now()
             controller.instance.save()
 
         with tracer.start_span('serializing_data', child_of=request.span):

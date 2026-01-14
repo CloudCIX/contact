@@ -5,6 +5,7 @@ from datetime import datetime
 from cloudcix_rest.models import BaseModel
 from django.db import models
 from django.urls import reverse
+from django.utils import timezone
 
 # local
 from .chatbot import Chatbot
@@ -26,6 +27,7 @@ class Conversation(BaseModel):
     contact = models.ForeignKey(Contact, on_delete=models.PROTECT, related_name='conversations', null=True)
     cookie = models.CharField(max_length=50, null=True)
     name = models.CharField(max_length=50)
+    last_message_at = models.DateTimeField(default=timezone.now)
 
     class Meta:
         """
@@ -40,9 +42,10 @@ class Conversation(BaseModel):
             models.Index(fields=['updated'], name='conversation_updated'),
             models.Index(fields=['id'], name='conversation_id'),
             models.Index(fields=['name'], name='conversation_name'),
+            models.Index(fields=['last_message_at'], name='conversation_last_message_at'),
         ]
 
-        ordering = ['-updated']
+        ordering = ['-last_message_at']
 
     def get_absolute_url(self):
         """

@@ -20,6 +20,7 @@ from contact.utils import CustomStreamingHttpResponse
 from contact.vector import best_match_25, rerank, vector_similarity
 from django.conf import settings
 from django.http import StreamingHttpResponse
+from django.utils import timezone
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -56,12 +57,17 @@ class AnswerCollection(APIView):
             sys.stdout.flush()
             return
 
+        logger.warning('Creating QAndA record after streaming answer.')
         QAndA.objects.create(
             answer=answer_content,
             conversation=conversation,
             question=users_question,
             question_images=users_images,
         )
+        logger.warning('QAndA record created successfully after streaming answer.')
+        conversation.last_message_at = timezone.now()
+        conversation.save(update_fields=['last_message_at'])
+        logger.warning(f'Updated Conversation {conversation.id} last_message_at to {conversation.last_message_at}')
         logger.info('Streaming Answer Process End')
 
     @staticmethod

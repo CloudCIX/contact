@@ -1,10 +1,11 @@
 # stdlib
 from typing import Optional
+
 # libs
 from cloudcix_rest.controllers import ControllerBase
+
 # local
 from ..models import Contact, Conversation
-
 
 __all__ = [
     'ConversationListController',
@@ -25,6 +26,7 @@ class ConversationListController(ControllerBase):
         allowed_ordering = (
             'created',
             'name',
+            'last_message_at',
         )
         search_fields = {
             'contact_id': ControllerBase.DEFAULT_NUMBER_FILTER_OPERATORS,
@@ -47,6 +49,7 @@ class ConversationCreateController(ControllerBase):
             'contact_id',
             'cookie',
             'name',
+            'last_message_at',
         )
 
     def validate_contact_id(self, contact_id: Optional[int]) -> Optional[str]:
@@ -108,4 +111,22 @@ class ConversationCreateController(ControllerBase):
             return 'contact_conversation_create_106'
 
         self.cleaned_data['name'] = name
+        return None
+
+    def validate_last_message_at(self, last_message_at: Optional[str]) -> Optional[str]:
+        """
+        description: The timestamp of the last message in the Conversation
+        type: string
+        format: date-time
+        required: False
+        """
+        if last_message_at is None:
+            return None
+
+        try:
+            last_message_at_dt = self.parse_datetime_field('last_message_at', last_message_at)
+        except ValueError:
+            return 'contact_conversation_create_107'
+
+        self.cleaned_data['last_message_at'] = last_message_at_dt
         return None

@@ -1,5 +1,6 @@
 # libs
 import serpy
+
 # local
 
 
@@ -32,6 +33,9 @@ class ConversationSerializer(serpy.Serializer):
     uri:
         description: URL that can be used to run methods in the API associated with the Conversation instance.
         type: string
+    last_message_at:
+        description: Timestamp, in ISO format, of when the last message was sent in the Conversation
+        type: string
     """
     created = serpy.Field(attr='created.isoformat', call=True)
     chatbot_id = serpy.Field()
@@ -40,3 +44,4 @@ class ConversationSerializer(serpy.Serializer):
     name = serpy.Field()
     updated = serpy.Field(attr='updated.isoformat', call=True)
     uri = serpy.Field(attr='get_absolute_url', call=True)
+    last_message_at = serpy.Field(attr='last_message_at.isoformat', call=True)
