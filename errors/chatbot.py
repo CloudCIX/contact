@@ -85,7 +85,7 @@ contact_chatbot_create_134 = 'The "name" parameter is invalid. Chatbot names mus
 contact_chatbot_create_135 = 'The "nn_llm" parameter is invalid. "nn_llm" is required.'
 contact_chatbot_create_136 = (
     'The "nn_llm" parameter is invalid. "nn_llm" is required and must be an allowed choice. The supported choices are '
-    '"chatgpt4", "UCCIX-Mistral-24B", "uccix_instruct_70b", and "uccix_instruct".'
+    '"chatgpt4", "UCCIX-Mistral-24B", "uccix_instruct_70b", "uccix_instruct", and "Mistral-Large-3".'
 )
 contact_chatbot_create_138 = (
     'The "pdf_scraping" parameter is invalid. "pdf_scraping" is required and must be an allowed choice. The supported '

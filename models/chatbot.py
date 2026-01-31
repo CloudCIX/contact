@@ -63,6 +63,7 @@ class Chatbot(BaseModel):
     UCCIX_INSTRUCT = 'uccix_instruct'
     UCCIX_INSTRUCT_70B = 'uccix_instruct_70b'
     MISTRAL = 'UCCIX-Mistral-24B'
+    MISTRAL_LARGE_3 = 'Mistral-Large-3'
 
     NN_LLM_CHOICES = (
         (CHATGPT4_1, CHATGPT4_1),
@@ -70,6 +71,7 @@ class Chatbot(BaseModel):
         (MISTRAL, MISTRAL),
         (UCCIX_INSTRUCT, UCCIX_INSTRUCT),
         (UCCIX_INSTRUCT_70B, UCCIX_INSTRUCT_70B),
+        (MISTRAL_LARGE_3, MISTRAL_LARGE_3),
     )
 
     # PDF Scraping Choices

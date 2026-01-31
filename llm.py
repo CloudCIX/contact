@@ -1,5 +1,6 @@
 # std lib
 import datetime
+import json
 import logging
 import string
 
@@ -9,6 +10,7 @@ import requests
 # local
 from contact.models import QAndA
 from openai import OpenAI
+from pydantic import BaseModel
 
 
 class ContactExceptionError(Exception):
@@ -22,7 +24,12 @@ LLM_DICT = {
     'uccix_instruct_70b': 'UCCIX-v2-Llama3.1-70B-Instruct',
     'UCCIX-Mistral-24B': 'UCCIX-Mistral-24B',
     'deepseek': 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
+    'Mistral-Large-3': 'Mistral-Large-3',
 }
+
+
+class TitleResponse(BaseModel):
+    title: str
 
 
 def llm_summary(chatbot, messages):
@@ -34,14 +41,14 @@ def llm_summary(chatbot, messages):
             base_url='https://ml-openai.cloudcix.com',
         )
 
-        chat_completion = client.chat.completions.create(
+        chat_completion = client.chat.completions.parse(
             messages=messages,
             model=LLM_DICT[chatbot.nn_llm],
-            stream=True,
             timeout=600,
-            max_tokens=100,
-            temperature=0.1,
+            max_tokens=200,
+            temperature=0.15,
             seed=42,
+            response_format=TitleResponse,
         )
     except (
         openai.InternalServerError,
@@ -54,10 +61,8 @@ def llm_summary(chatbot, messages):
         raise ContactExceptionError()
     logger.info('LLM Summary Process End')
 
-    for chunk in chat_completion:
-        if not chunk.choices or chunk.choices[0].delta is None:
-            continue
-        yield chunk.choices[0].delta.content
+    result = json.loads(chat_completion.choices[0].message.content)
+    return result['title']
 
 
 def llm(chatbot, messages):

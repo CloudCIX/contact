@@ -5,16 +5,15 @@ Management for Summary
 # libs
 from cloudcix_rest.exceptions import Http400, Http404, Http503
 from cloudcix_rest.views import APIView
-from django.conf import settings
-from rest_framework import status
-from rest_framework.request import Request
-from rest_framework.response import Response
 # local
 from contact.llm import ContactExceptionError, llm_summary
 from contact.models import Chatbot, Contact, Conversation
 from contact.permissions.summary import Permissions
 from contact.serializers import ConversationSerializer
-
+from django.conf import settings
+from rest_framework import status
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 __all__ = [
     'SummaryCollection',
@@ -82,15 +81,14 @@ class SummaryCollection(APIView):
 
         with tracer.start_span('summarising_question', child_of=request.span):
             try:
+                content = f'Create a title in exactly 3 words for this text: "{question}". '
+                content += 'The title should be in plain text only, no quotes, asterisks, or other formatting.'
                 prompt = [{
                     'role': 'user',
-                    'content': f'Create a title in exactly 3 words for this text: "{question}"',
+                    'content': content,
                 }]
-                llm_sum = llm_summary(obj, prompt)
+                summary = llm_summary(obj, prompt)
 
-                summary = ''
-                for partial_name in llm_sum:
-                    summary += str(partial_name)
                 if len(summary) > 50:  # pragma: no cover
                     summary = summary[:50]
 
