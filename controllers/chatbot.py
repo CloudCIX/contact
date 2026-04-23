@@ -65,6 +65,7 @@ class ChatbotCreateController(ControllerBase):
         validation_order = (
             'api_key',
             'apply_intent_classification',
+            'apply_prompt_rewriting',
             'apply_safety_classifier',
             'apply_reranking',
             'bm25_limit',
@@ -139,6 +140,20 @@ class ChatbotCreateController(ControllerBase):
         if not isinstance(apply_intent_classification, bool):
             return 'contact_chatbot_create_104'
         self.cleaned_data['apply_intent_classification'] = apply_intent_classification
+        return None
+
+    def validate_apply_prompt_rewriting(self, apply_prompt_rewriting: Optional[bool]) -> Optional[str]:
+        """
+        description: |
+            If True, user prompts are rewritten before retrieval and final response generation.
+        required: false
+        type: boolean
+        """
+        if apply_prompt_rewriting is None:
+            return None
+        if not isinstance(apply_prompt_rewriting, bool):
+            return 'contact_chatbot_create_167'
+        self.cleaned_data['apply_prompt_rewriting'] = apply_prompt_rewriting
         return None
 
     def validate_apply_safety_classifier(self, apply_safety_classifier: Optional[bool]) -> Optional[str]:
@@ -796,6 +811,7 @@ class ChatbotUpdateController(ControllerBase):
         validation_order = (
             'api_key',
             'apply_intent_classification',
+            'apply_prompt_rewriting',
             'apply_safety_classifier',
             'apply_reranking',
             'bm25_limit',
@@ -870,6 +886,20 @@ class ChatbotUpdateController(ControllerBase):
         if not isinstance(apply_intent_classification, bool):
             return 'contact_chatbot_update_104'
         self.cleaned_data['apply_intent_classification'] = apply_intent_classification
+        return None
+
+    def validate_apply_prompt_rewriting(self, apply_prompt_rewriting: Optional[bool]) -> Optional[str]:
+        """
+        description: |
+            If True, user prompts are rewritten before retrieval and final response generation.
+        required: false
+        type: boolean
+        """
+        if apply_prompt_rewriting is None:
+            return None
+        if not isinstance(apply_prompt_rewriting, bool):
+            return 'contact_chatbot_update_167'
+        self.cleaned_data['apply_prompt_rewriting'] = apply_prompt_rewriting
         return None
 
     def validate_apply_safety_classifier(self, apply_safety_classifier: Optional[bool]) -> Optional[str]:

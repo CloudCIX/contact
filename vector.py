@@ -15,7 +15,6 @@ def vector_similarity(api_key, names, encoder, query, order_by, limit, threshold
     logger.info(f'Vector DB Embeddings retrieval Process with Model {encoder} Start')
     embedding_vectors = []
     data = {
-        'api_key': api_key,
         'names': names,
         'method': 'vector_search',
         'encoder_name': encoder,
@@ -28,6 +27,7 @@ def vector_similarity(api_key, names, encoder, query, order_by, limit, threshold
         response = requests.post(
             url=settings.EMBEDDING_DB_URL,
             json=data,
+            headers={'Authorization': f'Bearer {api_key}'},
             timeout=600,
         )
     except Exception as e:  # pragma: no cover
@@ -50,7 +50,6 @@ def best_match_25(api_key, names, chunks, limit, query):  # pragma: no cover
     top_chunks = []
     try:
         data = {
-            'api_key': api_key,
             'method': 'keyword_search',
             'names': names,
             'chunks': chunks,
@@ -60,6 +59,7 @@ def best_match_25(api_key, names, chunks, limit, query):  # pragma: no cover
         response = requests.post(
             url=settings.EMBEDDING_DB_URL,
             json=data,
+            headers={'Authorization': f'Bearer {api_key}'},
             timeout=600,
         )
     except Exception as e:
@@ -80,7 +80,6 @@ def rerank(chatbot, chunks: List, users_question: str):
     reranked_chunks = []
     try:
         data = {
-            'api_key': chatbot.api_key,
             'method': 'rerank',
             'reranker': chatbot.reranker,
             'reranking_limit': chatbot.reranking_limit,
@@ -90,6 +89,7 @@ def rerank(chatbot, chunks: List, users_question: str):
         response = requests.post(
             url=settings.EMBEDDING_DB_URL,
             json=data,
+            headers={'Authorization': f'Bearer {chatbot.api_key}'},
             timeout=600,
         )
     except Exception as e:

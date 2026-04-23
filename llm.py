@@ -6,10 +6,11 @@ import string
 
 import openai
 # libs
-import requests
+import httpx
 # local
+from django.conf import settings
 from contact.models import QAndA
-from openai import OpenAI
+from openai import AsyncOpenAI
 from pydantic import BaseModel
 
 
@@ -18,12 +19,7 @@ class ContactExceptionError(Exception):
 
 
 LLM_DICT = {
-    'chatgpt4': 'GPT-4o',
-    'chatgpt4.1': 'GPT-4.1',
-    'uccix_instruct': 'UCCIX-Instruct',
-    'uccix_instruct_70b': 'UCCIX-v2-Llama3.1-70B-Instruct',
     'UCCIX-Mistral-24B': 'UCCIX-Mistral-24B',
-    'deepseek': 'deepseek-ai/DeepSeek-R1-Distill-Llama-70B',
     'Mistral-Large-3': 'Mistral-Large-3',
 }
 
@@ -32,16 +28,141 @@ class TitleResponse(BaseModel):
     title: str
 
 
-def llm_summary(chatbot, messages):
+class PromptRewriteResponse(BaseModel):
+    rewritten_question: str
+
+
+PROMPT_REWRITER_SYSTEM = """You are a query rewriter for a RAG (Retrieval-Augmented Generation) system.
+Your sole job is to rewrite the user's question into the best possible search query for document retrieval.
+You do NOT answer the question. You only rewrite it.
+
+---
+
+## RULES
+
+### Rule 1: Fix spelling and grammar
+Correct misspellings and typos so the query matches how the information would appear in documents.
+
+Examples:
+- "Who are the councilars of Cork Citty Councel?" → "Who are the councillors of Cork City Council?"
+- "What is the proceedure for planin permision?" → "What is the procedure for planning permission?"
+- "hwo do i aply for social houzing?" → "How do I apply for social housing?"
+
+---
+
+### Rule 2: Resolve follow-up questions using chat history
+If the question references something from earlier in the conversation (e.g. "it", "that", "they", "there"),
+replace the pronoun with the actual subject from chat history so the query is self-contained.
+
+Examples:
+- Chat History: "User: What is the Cork City Council budget? Assistant: The Cork City Council budget for
+    2024 is €150 million."
+  Question: "How much is it this year?" → "What is the Cork City Council budget for 2025?"
+
+- Chat History: "User: Who are the councillors of Cork City Council? Assistant: There are 31 councillors."
+  Question: "How are they elected?" → "How are Cork City Council councillors elected?"
+
+- Chat History: "User: What is the planning permission process? Assistant: You must submit a planning application..."
+  Question: "How long does that take?" → "How long does the Cork City Council planning permission process take?"
+
+---
+
+### Rule 3: Rephrase for better retrieval
+Rewrite vague, conversational, or poorly structured questions into precise retrieval-friendly queries
+that match the language likely used in official documents, reports, or knowledge bases.
+
+Examples:
+- "tell me about the luas" → "What is the Luas and how does it operate in Dublin?"
+- "Cork roads any news?" → "What are the latest Cork road works or traffic updates?"
+- "is there parking near city hall?" → "Where are the parking facilities near Cork City Hall?"
+- "what does the council actually do?" → "What are the responsibilities and functions of Cork City Council?"
+
+---
+
+### Rule 4: Return unchanged if already clear
+If the question is already well-formed, correctly spelled, and retrieval-ready, return it exactly as-is.
+Do not rephrase for the sake of it.
+
+Examples that should be returned unchanged:
+- "What are the opening hours of Cork City Library?"
+- "How do I apply for a Cork City Council housing grant?"
+- "Who is the Lord Mayor of Cork?"
+
+---
+
+## IMPORTANT
+- Preserve the original intent exactly. Never change what the user is asking about.
+- Never answer the question.
+- Never add information that wasn't in the question or chat history.
+- Use the chatbot context to understand domain terminology and correct spelling of proper nouns.
+- Output only the rewritten question, nothing else."""
+
+
+PROMPT_REWRITER_USER = """## CHATBOT CONTEXT
+{chatbot_context}
+
+---
+
+## CHAT HISTORY
+{chat_history}
+
+---
+
+## CURRENT USER QUESTION
+{query}
+
+---
+
+## YOUR TASK
+Rewrite the question above following the rules.
+If no rewrite is needed, return it exactly as-is.
+
+Rewritten Question:"""
+
+
+def create_prompt_rewrite_messages(chat_history, users_question, chatbot_system_prompt='', chatbot_user_prompt=''):
+    """
+    Build rewrite messages for the LLM rewriter.
+
+    Args:
+        chat_history: String of previous conversation exchanges (empty string if no prior messages)
+        users_question: The current user question to rewrite
+        chatbot_system_prompt: System instructions configured by the admin (empty string if not set)
+        chatbot_user_prompt: Knowledge base context/user prompt configured by the admin (empty string if not set)
+
+    Returns:
+        List of message dicts with 'role' and 'content' keys, ready to send to the LLM
+    """
+    # Combine system prompt (instructions) and user prompt (knowledge base context)
+    # to provide domain awareness to the rewriter
+    chatbot_context = ''
+    if chatbot_system_prompt:
+        chatbot_context += f'{chatbot_system_prompt}\n'
+    if chatbot_user_prompt:
+        chatbot_context += f'{chatbot_user_prompt}'
+
+    user_prompt = PROMPT_REWRITER_USER.format(
+        chatbot_context=chatbot_context.strip() or '(This chatbot has no system prompt or domain context configured)',
+        chat_history=chat_history or '(No previous messages in this conversation)',
+        query=users_question,
+    )
+
+    return [
+        {'role': 'system', 'content': PROMPT_REWRITER_SYSTEM},
+        {'role': 'user', 'content': user_prompt},
+    ]
+
+
+async def llm_summary(chatbot, messages):
     logger = logging.getLogger('contact.llm.llm_summary')
     logger.info('LLM Summary Process Start')
     try:
-        client = OpenAI(
+        client = AsyncOpenAI(
             api_key=chatbot.api_key,
-            base_url='https://ml-openai.cloudcix.com',
+            base_url=settings.CLOUDCIX_LLM_URL,
         )
 
-        chat_completion = client.chat.completions.parse(
+        chat_completion = await client.chat.completions.parse(
             messages=messages,
             model=LLM_DICT[chatbot.nn_llm],
             timeout=600,
@@ -51,11 +172,12 @@ def llm_summary(chatbot, messages):
             response_format=TitleResponse,
         )
     except (
+        openai.APIConnectionError,
         openai.InternalServerError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.HTTPError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
+        httpx.ConnectError,
+        httpx.HTTPStatusError,
+        httpx.TimeoutException,
+        httpx.RequestError,
     ) as e:  # pragma: no cover
         logger.error(f'A non 200 response has occurred with the LLM Summary service.\nException: {e}')
         raise ContactExceptionError()
@@ -65,16 +187,59 @@ def llm_summary(chatbot, messages):
     return result['title']
 
 
-def llm(chatbot, messages):
+async def llm_rewrite_prompt(chatbot, messages, original_question=''):
+    logger = logging.getLogger('contact.llm.llm_rewrite_prompt')
+    logger.info('LLM Prompt Rewriting Process Start')
+    try:
+        client = AsyncOpenAI(
+            api_key=chatbot.api_key,
+            base_url=settings.CLOUDCIX_LLM_URL,
+        )
+
+        chat_completion = await client.chat.completions.parse(
+            messages=messages,
+            model=LLM_DICT[chatbot.nn_llm],
+            timeout=600,
+            max_tokens=200,
+            temperature=0.1,
+            seed=42,
+            response_format=PromptRewriteResponse,
+        )
+    except (
+        openai.APIConnectionError,
+        openai.InternalServerError,
+        httpx.ConnectError,
+        httpx.HTTPStatusError,
+        httpx.TimeoutException,
+        httpx.RequestError,
+    ) as e:  # pragma: no cover
+        logger.error(f'A non 200 response has occurred with the LLM Prompt Rewriting service.\nException: {e}')
+        raise ContactExceptionError()
+    logger.info('LLM Prompt Rewriting Process End')
+
+    result = json.loads(chat_completion.choices[0].message.content)
+    rewritten_question = str(result.get('rewritten_question', '')).strip()
+    if len(rewritten_question) == 0:
+        rewritten_question = str(original_question).strip()
+
+    logger.info('Original Question: "%s"', original_question)
+    logger.info('Rewritten Question: "%s"', rewritten_question)
+
+    return {
+        'rewritten_question': rewritten_question,
+    }
+
+
+async def llm(chatbot, messages):
     logger = logging.getLogger('contact.llm.llm')
     logger.info('LLM Process Start')
     try:
-        client = OpenAI(
+        client = AsyncOpenAI(
             api_key=chatbot.api_key,
-            base_url='https://ml-openai.cloudcix.com',
+            base_url=settings.CLOUDCIX_LLM_URL,
         )
 
-        chat_completion = client.chat.completions.create(
+        chat_completion = await client.chat.completions.create(
             messages=messages,
             model=LLM_DICT[chatbot.nn_llm],
             stream=True,
@@ -83,11 +248,12 @@ def llm(chatbot, messages):
             temperature=float(chatbot.temperature),
         )
     except (
+        openai.APIConnectionError,
         openai.InternalServerError,
-        requests.exceptions.ConnectionError,
-        requests.exceptions.HTTPError,
-        requests.exceptions.Timeout,
-        requests.exceptions.RequestException,
+        httpx.ConnectError,
+        httpx.HTTPStatusError,
+        httpx.TimeoutException,
+        httpx.RequestError,
     ) as e:  # pragma: no cover
         logger.error(f'A non 200 response has occurred with the LLM service.\nException: {e}')
         raise ContactExceptionError()
@@ -105,22 +271,16 @@ def llm(chatbot, messages):
 
     logger.info('LLM Process End')
 
-    if chatbot.nn_llm in ['chatgpt4', 'uccix_instruct']:
-        for chunk in chat_completion:
-            if not chunk.choices or chunk.choices[0].delta is None:
-                continue
-            yield chunk.choices[0].delta.content
-    else:
-        for chunk in chat_completion:
-            if not chunk.choices or chunk.choices[0].delta is None:
-                continue
-            content = chunk.choices[0].delta.content
-            if content == '<think>':
-                yield '[THINK]'
-            elif content == '</think>':
-                yield '[/THINK]'
-            else:
-                yield content
+    async for chunk in chat_completion:
+        if not chunk.choices or chunk.choices[0].delta is None:
+            continue
+        content = chunk.choices[0].delta.content
+        if content == '<think>':
+            yield '[THINK]'
+        elif content == '</think>':
+            yield '[/THINK]'
+        else:
+            yield content
 
 
 def echo(question):

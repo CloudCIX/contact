@@ -17,6 +17,10 @@ class ChatbotSerializer(serpy.Serializer):
         description: |
             If True, question sent to intent classification LLM.
         type: boolean
+    apply_prompt_rewriting:
+        description: |
+            If True, user prompts are rewritten before retrieval and final response generation.
+        type: boolean
     apply_safety_classifier:
         description: |
             If True, question sent to safety classification LLM.
@@ -176,6 +180,7 @@ class ChatbotSerializer(serpy.Serializer):
     """
     api_key = serpy.Field()
     apply_intent_classification = serpy.Field()
+    apply_prompt_rewriting = serpy.Field()
     apply_safety_classifier = serpy.Field()
     apply_reranking = serpy.Field()
     bm25_limit = serpy.Field()

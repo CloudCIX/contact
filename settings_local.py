@@ -58,7 +58,5 @@ CLOUDCIX_INFLUX_TAGS = {
 # CloudCIX Chatbot Settings (optional)
 CHATBOT_URL = os.getenv('CHATBOT_URL')
 CLOUDCIX_ML_URL = os.getenv('CLOUDCIX_ML_URL')
-EMBEDDING_DB_URL = os.getenv('EMBEDDING_DB_URL', f'{CLOUDCIX_ML_URL}/embedding_db/')
-
-# Corpus Variables
-CONTACT_CORPUS = os.getenv('CONTACT_CORPUS')
+EMBEDDING_DB_URL = os.getenv('EMBEDDING_DB_URL', f'{CLOUDCIX_ML_URL}/embedding/')
+CLOUDCIX_LLM_URL = os.getenv('CLOUDCIX_LLM_URL', 'https://inference.cloudcix.com')

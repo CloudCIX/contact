@@ -3,8 +3,8 @@ Management for Summary
 """
 # stdlib
 # libs
+from adrf.views import APIView
 from cloudcix_rest.exceptions import Http400, Http404, Http503
-from cloudcix_rest.views import APIView
 # local
 from contact.llm import ContactExceptionError, llm_summary
 from contact.models import Chatbot, Contact, Conversation
@@ -14,6 +14,7 @@ from django.conf import settings
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
+from asgiref.sync import sync_to_async
 
 __all__ = [
     'SummaryCollection',
@@ -27,7 +28,7 @@ class SummaryCollection(APIView):
 
     serializer_class = ConversationSerializer
 
-    def post(self, request: Request, chatbot_name: str) -> Response:
+    async def post(self, request: Request, chatbot_name: str) -> Response:
         """
         summary: Summarise sent Question
 
@@ -61,7 +62,7 @@ class SummaryCollection(APIView):
 
         with tracer.start_span('retrieving_requested_object', child_of=request.span):
             try:
-                obj = Chatbot.objects.get(name=chatbot_name)
+                obj = await sync_to_async(Chatbot.objects.get, thread_sensitive=True)(name=chatbot_name)
             except Chatbot.DoesNotExist:
                 return Http404(error_code='contact_summary_create_001')
 
@@ -75,7 +76,10 @@ class SummaryCollection(APIView):
         with tracer.start_span('validate_contact_id', child_of=request.span):
             if contact_id is not None:
                 try:
-                    Contact.objects.get(pk=data['contact_id'], member_id=obj.member_id)
+                    await sync_to_async(
+                        Contact.objects.get,
+                        thread_sensitive=True,
+                    )(pk=data['contact_id'], member_id=obj.member_id)
                 except Contact.DoesNotExist:
                     return Http404(error_code='contact_summary_create_003')
 
@@ -87,7 +91,7 @@ class SummaryCollection(APIView):
                     'role': 'user',
                     'content': content,
                 }]
-                summary = llm_summary(obj, prompt)
+                summary = await llm_summary(obj, prompt)
 
                 if len(summary) > 50:  # pragma: no cover
                     summary = summary[:50]
@@ -96,9 +100,15 @@ class SummaryCollection(APIView):
                 return Http503(error_code='contact_summary_create_004')
 
         with tracer.start_span('creating_conversation', child_of=request.span):
-            conversation = Conversation.objects.create(name=summary, chatbot=obj, contact_id=contact_id, cookie=cookie)
+            conversation = await sync_to_async(
+                Conversation.objects.create,
+                thread_sensitive=True,
+            )(name=summary, chatbot=obj, contact_id=contact_id, cookie=cookie)
 
         with tracer.start_span('serializing_conversation', child_of=request.span):
-            data = ConversationSerializer(instance=conversation).data
+            data = await sync_to_async(
+                lambda: ConversationSerializer(instance=conversation).data,
+                thread_sensitive=True,
+            )()
 
         return Response({'content': data}, status=status.HTTP_201_CREATED)

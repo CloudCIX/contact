@@ -51,7 +51,7 @@ contact_chatbot_create_119 = 'The "echo" parameter is invalid. The "echo" parame
 contact_chatbot_create_120 = 'The "encoder" parameter is invalid. "encoder" is required.'
 contact_chatbot_create_121 = (
     'The "encoder" parameter is invalid. "encoder" is required and must be an allowed choice. The supported choices '
-    'are "dragon_plus", "test_encoder" and "use4".'
+    'are "cix_encoder" and "test_encoder".'
 )
 contact_chatbot_create_122 = (
     'The "horizontal_percentage" parameter is invalid. "horizontal_percentage" must be a decimal.'
@@ -85,7 +85,7 @@ contact_chatbot_create_134 = 'The "name" parameter is invalid. Chatbot names mus
 contact_chatbot_create_135 = 'The "nn_llm" parameter is invalid. "nn_llm" is required.'
 contact_chatbot_create_136 = (
     'The "nn_llm" parameter is invalid. "nn_llm" is required and must be an allowed choice. The supported choices are '
-    '"chatgpt4", "UCCIX-Mistral-24B", "uccix_instruct_70b", "uccix_instruct", and "Mistral-Large-3".'
+    ' "UCCIX-Mistral-24B" and "Mistral-Large-3".'
 )
 contact_chatbot_create_138 = (
     'The "pdf_scraping" parameter is invalid. "pdf_scraping" is required and must be an allowed choice. The supported '
@@ -99,7 +99,7 @@ contact_chatbot_create_141 = 'The "reference_limit" parameter is invalid. "refer
 contact_chatbot_create_142 = 'The "reranker" parameter is invalid. "reranker" is required.'
 contact_chatbot_create_143 = (
     'The "reranker" parameter is invalid. "reranker" is required and must be an allowed choice. The supported choices '
-    'are "chatgpt4", "UCCIX-Mistral-24B", "uccix_instruct_70b", "uccix_instruct" and "minilm-l-6-v2".'
+    'are "UCCIX-Mistral-24B", "Mistral-Large-3" and "minilm-l-6-v2".'
 )
 contact_chatbot_create_144 = 'The "reranking_limit" parameter is invalid. "reranking_limit" must be an integer.'
 contact_chatbot_create_145 = (
@@ -151,6 +151,10 @@ contact_chatbot_create_166 = (
     'The "apply_safety_classifier" parameter is invalid. The "apply_safety_classifier" parameter must be a '
     'boolean'
 )
+contact_chatbot_create_167 = (
+    'The "apply_prompt_rewriting" parameter is invalid. The "apply_prompt_rewriting" parameter must be a '
+    'boolean'
+)
 contact_chatbot_create_201 = 'You do not have permission to make this request. Your Member must be self-managed.'
 
 # Read
@@ -194,12 +198,16 @@ contact_chatbot_update_116 = (
     'The "cookie_consent_text" parameter is invalid. "cookie_consent_text" cannot be longer than 255 characters.'
 )
 contact_chatbot_update_117 = 'The "corpus_names" parameter is invalid. "corpus_names" must be a list'
+contact_chatbot_update_167 = (
+    'The "apply_prompt_rewriting" parameter is invalid. The "apply_prompt_rewriting" parameter must be a '
+    'boolean'
+)
 
 contact_chatbot_update_119 = 'The "echo" parameter is invalid. The "echo" parameter must be a boolean'
 contact_chatbot_update_120 = 'The "encoder" parameter is invalid. "encoder" is required.'
 contact_chatbot_update_121 = (
     'The "encoder" parameter is invalid. "encoder" is required and must be an allowed choice. The supported choices '
-    'are "dragon_plus", "test_encoder" and "use4".'
+    'are "cix_encoder" and "test_encoder".'
 )
 contact_chatbot_update_122 = (
     'The "horizontal_percentage" parameter is invalid. "horizontal_percentage" must be a decimal.'
@@ -233,7 +241,7 @@ contact_chatbot_update_134 = 'The "name" parameter is invalid. Chatbot names mus
 contact_chatbot_update_135 = 'The "nn_llm" parameter is invalid. "nn_llm" is required.'
 contact_chatbot_update_136 = (
     'The "nn_llm" parameter is invalid. "nn_llm" is required and must be an allowed choice. The supported choices are '
-    '"chatgpt4", "UCCIX-Mistral-24B", "uccix_instruct_70b", and "uccix_instruct".'
+    '"UCCIX-Mistral-24B" and "Mistral-Large-3".'
 )
 contact_chatbot_update_138 = (
     'The "pdf_scraping" parameter is invalid. "pdf_scraping" is required and must be an allowed choice. The supported '
@@ -247,7 +255,7 @@ contact_chatbot_update_141 = '"reference_limit" parameter is invalid. "reference
 contact_chatbot_update_142 = 'The "reranker" parameter is invalid. "reranker" is required.'
 contact_chatbot_update_143 = (
     'The "reranker" parameter is invalid. "reranker" is required and must be an allowed choice. The supported choices '
-    'are "chatgpt4", "UCCIX-Mistral-24B", "uccix_instruct_70b", "uccix_instruct" and "minilm-l-6-v2".'
+    'are "UCCIX-Mistral-24B", "Mistral-Large-3" and "minilm-l-6-v2".'
 )
 contact_chatbot_update_144 = '"reranking_limit" parameter is invalid. "reranking_limit" is a required integer.'
 contact_chatbot_update_145 = (

@@ -70,11 +70,12 @@ class AuthResource(APIView):
         with tracer.start_span('checking_for_required_fields', child_of=request.span):
             if 'email' not in data or 'password' not in data:
                 return Http400(error_code='contact_auth_create_002')
+            email = str(data['email']).strip().lower()
 
         # Fetch contact for sent email in requesting users member
         with tracer.start_span('fetching_contact', child_of=request.span):
             try:
-                contact = Contact.objects.get(email=data['email'], member_id=obj.member_id)
+                contact = Contact.objects.get(email=email, member_id=obj.member_id)
             except Contact.DoesNotExist:
                 return Http400(error_code='contact_auth_create_003')
 

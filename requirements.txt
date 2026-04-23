@@ -3,3 +3,8 @@ bcrypt
 openai
 rank-bm25
 unstructured==0.10.28
+# ASGI server and async HTTP client
+uvicorn[standard]>=0.27.0
+httpx>=0.27.0
+# Async Django REST Framework views
+adrf>=0.1.0

@@ -71,23 +71,31 @@ def smalltalk(question):
     # Check for profanity, if exists return message not responding to question
     profanity = (
         ' arse ',
+        'asshole',
         ' bastard ',
         'bollocks',
         'bullshit',
         ' cunt ',
+        'dick head',
+        'dickhead',
         'dipshit',
+        'dumbass',
         ' feck ',
         ' focker ',
         ' fuck ',
         'fucker',
         'fuckface',
         ' fucking ',
+        'motherfucker',
+        'mother fucker',
         ' nigga ',
         ' nigger',
         ' shit ',
         ' shite ',
         'shithead',
         'shitting',
+        'sh1t',
+        'slut',
         ' whore ',
     )
 
@@ -121,7 +129,7 @@ def smalltalk(question):
         'who are you',
         'your name',
     ):
-        a = "I don't have a name, but call me chatbot if you like! Do you have a question for me?"
+        a = "I don't have a name, but call me Guiden if you like! Do you have a question for me?"
     elif q in (
         'are you a idiot',
         'are you an idiot',

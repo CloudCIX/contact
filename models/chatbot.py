@@ -24,13 +24,9 @@ class Chatbot(BaseModel):
 
     # Encoder Choice Options
     CIX_ENCODER = 'cix_encoder'
-    DRAGON_PLUS = 'dragon_plus'
     TEST_ENCODER = 'test_encoder'
-    USE4 = 'use4'
     ENCODER_CHOICES = (
         (CIX_ENCODER, CIX_ENCODER),
-        (DRAGON_PLUS, DRAGON_PLUS),
-        (USE4, USE4),
         (TEST_ENCODER, TEST_ENCODER),
     )
 
@@ -58,19 +54,11 @@ class Chatbot(BaseModel):
     )
 
     # NN Choice Options
-    CHATGPT4 = 'chatgpt4'
-    CHATGPT4_1 = 'chatgpt4.1'
-    UCCIX_INSTRUCT = 'uccix_instruct'
-    UCCIX_INSTRUCT_70B = 'uccix_instruct_70b'
     MISTRAL = 'UCCIX-Mistral-24B'
     MISTRAL_LARGE_3 = 'Mistral-Large-3'
 
     NN_LLM_CHOICES = (
-        (CHATGPT4_1, CHATGPT4_1),
-        (CHATGPT4, CHATGPT4),
         (MISTRAL, MISTRAL),
-        (UCCIX_INSTRUCT, UCCIX_INSTRUCT),
-        (UCCIX_INSTRUCT_70B, UCCIX_INSTRUCT_70B),
         (MISTRAL_LARGE_3, MISTRAL_LARGE_3),
     )
 
@@ -116,7 +104,7 @@ class Chatbot(BaseModel):
     )
     corpus_names = models.JSONField(default=list)
     echo = models.BooleanField(default=False)
-    encoder = models.CharField(choices=ENCODER_CHOICES, max_length=12, default=USE4)
+    encoder = models.CharField(choices=ENCODER_CHOICES, max_length=12, default=CIX_ENCODER)
     horizontal_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=3)
     horizontal_position = models.CharField(choices=HORIZONTAL_POSITION_CHOICES, max_length=6, default=RIGHT)
     layout = models.CharField(choices=LAYOUT_CHOICES, max_length=6, default=WINDOW)
@@ -147,8 +135,9 @@ class Chatbot(BaseModel):
     contact_information = models.CharField(max_length=100, null=True)
     apply_reranking = models.BooleanField(default=False)
     reranking_limit = models.IntegerField(default=5)
-    reranker = models.CharField(choices=RERANKER_CHOICES, max_length=128, default=MINILM_L_6_v2)
+    reranker = models.CharField(choices=RERANKER_CHOICES, max_length=20, default=MINILM_L_6_v2)
     apply_intent_classification = models.BooleanField(default=False)
+    apply_prompt_rewriting = models.BooleanField(default=False)
     # Fallback answer if no similar references are retrieved. If not empty and retrieval returns zero chunks,
     # this text will be streamed back instead of calling the LLM.
     no_reference_answer = models.CharField(max_length=1000, default='')

@@ -4,20 +4,29 @@ Management for Answer
 import logging
 # stdlib
 import sys
+import re
 from copy import deepcopy
 
 # libs
+from adrf.views import APIView
 from cloudcix_rest.exceptions import Http400, Http404
-from cloudcix_rest.views import APIView
 # local
 from contact.intent import Intent, classify_intent
-from contact.llm import ContactExceptionError, create_prompt, echo, llm
+from contact.llm import (
+    ContactExceptionError,
+    create_prompt,
+    create_prompt_rewrite_messages,
+    echo,
+    llm,
+    llm_rewrite_prompt,
+)
 from contact.models import Chatbot, Conversation, QAndA
 from contact.permissions.answer import Permissions
 from contact.safety import classify_safety
 from contact.smalltalk import smalltalk
 from contact.utils import CustomStreamingHttpResponse
 from contact.vector import best_match_25, rerank, vector_similarity
+from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.http import StreamingHttpResponse
 from django.utils import timezone
@@ -29,18 +38,24 @@ __all__ = [
 ]
 
 
+async def async_list_to_generator(items):
+    """Helper to convert a list to an async generator."""
+    for item in items:
+        yield item
+
+
 class AnswerCollection(APIView):
     """
     Request to Answer a Question in a Conversation.
     """
 
     @staticmethod
-    def streaming_answer(response, conversation, users_question, users_images=[]):
+    async def streaming_answer(response, conversation, users_question, users_images=[]):
         logger = logging.getLogger('contact.views.answer.streaming_answer')
         logger.info('Streaming Answer Process Start')
         answer_content = ''
         try:
-            for ans in response:
+            async for ans in response:
                 answer_content += str(ans)
                 yield ans
                 sys.stdout.flush()
@@ -58,7 +73,7 @@ class AnswerCollection(APIView):
             return
 
         logger.warning('Creating QAndA record after streaming answer.')
-        QAndA.objects.create(
+        await sync_to_async(QAndA.objects.create, thread_sensitive=True)(
             answer=answer_content,
             conversation=conversation,
             question=users_question,
@@ -66,18 +81,18 @@ class AnswerCollection(APIView):
         )
         logger.warning('QAndA record created successfully after streaming answer.')
         conversation.last_message_at = timezone.now()
-        conversation.save(update_fields=['last_message_at'])
+        await sync_to_async(conversation.save, thread_sensitive=True)(update_fields=['last_message_at'])
         logger.warning(f'Updated Conversation {conversation.id} last_message_at to {conversation.last_message_at}')
         logger.info('Streaming Answer Process End')
 
     @staticmethod
-    def streaming_error_response():
+    async def streaming_error_response():
         response = ['An', 'unknown', 'error', 'has', 'occurred,', 'please', 'try', 'again', 'later.']
         for ans in response:
             yield ans
             sys.stdout.flush()
 
-    def post(self, request: Request, chatbot_name: str) -> Response:
+    async def post(self, request: Request, chatbot_name: str) -> Response:
         """
         summary: Answer sent Question
 
@@ -115,7 +130,7 @@ class AnswerCollection(APIView):
 
         with tracer.start_span('retrieving_requested_object', child_of=request.span):
             try:
-                chatbot = Chatbot.objects.get(name=chatbot_name)
+                chatbot = await sync_to_async(Chatbot.objects.get, thread_sensitive=True)(name=chatbot_name)
             except Chatbot.DoesNotExist:
                 return Http404(error_code='contact_answer_create_001')
 
@@ -128,7 +143,10 @@ class AnswerCollection(APIView):
 
         with tracer.start_span('validate_conversation_id', child_of=request.span):
             try:
-                conversation = Conversation.objects.get(pk=data['conversation_id'], chatbot=chatbot)
+                conversation = await sync_to_async(Conversation.objects.get, thread_sensitive=True)(
+                    pk=data['conversation_id'],
+                    chatbot=chatbot,
+                )
             except Conversation.DoesNotExist:
                 return Http404(error_code='contact_answer_create_003')
 
@@ -137,7 +155,7 @@ class AnswerCollection(APIView):
             smalltalk_question, smalltalk_answer = smalltalk(users_question)
 
             if smalltalk_answer is not None:
-                def streaming_small_talk_answer():
+                async def streaming_small_talk_answer():
                     for ans in smalltalk_answer.split():
                         yield ans + ' '
 
@@ -149,14 +167,14 @@ class AnswerCollection(APIView):
         if chatbot.apply_safety_classifier:
             with tracer.start_span('safety_classification', child_of=request.span):
                 try:
-                    is_safe = classify_safety(chatbot, users_question)
+                    is_safe = await classify_safety(chatbot, users_question)
                 except ContactExceptionError:  # pragma: no cover
                     return CustomStreamingHttpResponse(
                         self.streaming_error_response(),
                         content_type='text/event-stream; charset=utf-8',
                     )
             if not is_safe:
-                def streaming_safety_answer():
+                async def streaming_safety_answer():
                     safety_response = 'Your question has been flagged as unsafe and cannot be answered.'
                     for ans in safety_response.split():
                         yield ans + ' '
@@ -169,7 +187,7 @@ class AnswerCollection(APIView):
         if chatbot.apply_intent_classification:
             with tracer.start_span('classify_intent', child_of=request.span):
                 try:
-                    intent = classify_intent(chatbot, conversation, users_question)
+                    intent = await classify_intent(chatbot, conversation, users_question)
                 except ContactExceptionError:  # pragma: no cover
                     return CustomStreamingHttpResponse(
                         self.streaming_error_response(),
@@ -183,12 +201,18 @@ class AnswerCollection(APIView):
                         smalltalk_chatbot = deepcopy(chatbot)
                         smalltalk_chatbot.system_prompt = smalltalk_chatbot.smalltalk_prompt
                         smalltalk_chatbot.user_prompt = None
-                        prompt = create_prompt(conversation, chatbot, [], users_question, users_images)
+                        prompt = await sync_to_async(create_prompt, thread_sensitive=True)(
+                            conversation,
+                            chatbot,
+                            [],
+                            users_question,
+                            users_images,
+                        )
                         if smalltalk_chatbot.echo:
                             answer = echo(prompt)
                             return CustomStreamingHttpResponse(
                                 self.streaming_answer(
-                                    [(item + ' ').encode('utf-8') for item in answer.split()],
+                                    async_list_to_generator([(item + ' ').encode('utf-8') for item in answer.split()]),
                                     conversation,
                                     users_question,
                                     users_images,
@@ -207,48 +231,101 @@ class AnswerCollection(APIView):
                             content_type='text/event-stream; charset=utf-8',
                         )
 
-        # testing the vector similarity function in vector.py file related to answer service
-        with tracer.start_span('getting_similiar_chunks', child_of=request.span):
-            similar_chunks = vector_similarity(
-                chatbot.api_key,
-                chatbot.corpus_names,
-                chatbot.encoder,
-                users_question,
-                chatbot.similarity,
-                chatbot.reference_limit,
-                float(chatbot.threshold),
-            )
-            chunks = []
-            for item in similar_chunks:
-                hyperlink, chunk, distance = item
-                chunks.append([hyperlink, chunk])
+        rewritten_question = users_question
+        if getattr(chatbot, 'apply_prompt_rewriting', False):
+            with tracer.start_span('rewrite_prompt', child_of=request.span):
+                try:
+                    conversation_history = await sync_to_async(
+                        lambda: list(
+                            QAndA.objects.filter(conversation=conversation)
+                            .order_by('-created')
+                            .values_list('question', 'answer'),
+                        ),
+                        thread_sensitive=True,
+                    )()
+                    conversation_history_str = ''
+                    for question, answer in conversation_history:
+                        conversation_history_str += f'User: {question}\nChatbot: {answer}\n'
+                    rewrite_messages = create_prompt_rewrite_messages(
+                        conversation_history_str,
+                        users_question,
+                        chatbot_system_prompt=chatbot.system_prompt or '',
+                        chatbot_user_prompt=chatbot.user_prompt or '',
+                    )
+                    rewrite_result = await llm_rewrite_prompt(
+                        chatbot,
+                        rewrite_messages,
+                        original_question=users_question,
+                    )
+                    rewritten_question = rewrite_result['rewritten_question']
+                except ContactExceptionError:  # pragma: no cover
+                    return CustomStreamingHttpResponse(
+                        self.streaming_error_response(),
+                        content_type='text/event-stream; charset=utf-8',
+                    )
 
-            if chatbot.apply_reranking:
-                bm25_chunks = best_match_25(
+        # testing the vector similarity function in vector.py file related to answer service
+        if chatbot.corpus_names and len(chatbot.corpus_names) > 0:
+            with tracer.start_span('getting_similiar_chunks', child_of=request.span):
+                similar_chunks = vector_similarity(
                     chatbot.api_key,
                     chatbot.corpus_names,
-                    None,
-                    chatbot.bm25_limit,
-                    users_question,
+                    chatbot.encoder,
+                    rewritten_question,
+                    chatbot.similarity,
+                    chatbot.reference_limit,
+                    float(chatbot.threshold),
                 )
-                for item in bm25_chunks:
-                    chunks.append([item[0], item[1]])
-                chunk_set = list(set([tuple(item) for item in chunks]))
-                chunks = [list(item) for item in chunk_set]
-                top_chunks = rerank(chatbot, chunks, users_question)
-            elif chatbot.bm25_limit > 0:
-                top_chunks = best_match_25(chatbot.api_key, None, chunks, chatbot.bm25_limit, users_question)
-            else:
-                top_chunks = chunks
+                chunks = []
+                for item in similar_chunks:
+                    hyperlink, chunk, distance = item
+                    chunks.append([hyperlink, chunk])
+
+                if chatbot.apply_reranking:
+                    bm25_chunks = best_match_25(
+                        chatbot.api_key,
+                        chatbot.corpus_names,
+                        None,
+                        chatbot.bm25_limit,
+                        rewritten_question,
+                    )
+                    for item in bm25_chunks:
+                        chunks.append([item[0], item[1]])
+                    chunk_set = list(set([tuple(item) for item in chunks]))
+                    chunks = [list(item) for item in chunk_set]
+                    top_chunks = rerank(chatbot, chunks, rewritten_question)
+                elif chatbot.bm25_limit > 0:
+                    top_chunks = best_match_25(
+                        chatbot.api_key,
+                        None,
+                        chunks,
+                        chatbot.bm25_limit,
+                        rewritten_question,
+                    )
+                else:
+                    top_chunks = chunks
+        else:
+            top_chunks = []
 
         with tracer.start_span('getting_answer_from_chatbot_llm', child_of=request.span):
-            prompt = create_prompt(conversation, chatbot, top_chunks, users_question, users_images)
+            prompt = await sync_to_async(create_prompt, thread_sensitive=True)(
+                conversation,
+                chatbot,
+                top_chunks,
+                rewritten_question,
+                users_images,
+            )
             # Fallback: if there are no similar/reference chunks and chatbot.no_reference_answer is set
             if len(top_chunks) == 0 and bool(getattr(chatbot, 'no_reference_answer', '')):
                 fallback_text = chatbot.no_reference_answer
-                answer_iterable = [(item + ' ').encode('utf-8') for item in fallback_text.split()]
+                tokens = re.findall(r'\S+|\s+', fallback_text)
                 return CustomStreamingHttpResponse(
-                    self.streaming_answer(answer_iterable, conversation, users_question, users_images),
+                    self.streaming_answer(
+                        async_list_to_generator(tokens),
+                        conversation,
+                        users_question,
+                        users_images,
+                    ),
                     content_type='text/event-stream; charset=utf-8',
                 )
             if chatbot.echo is False:
@@ -269,7 +346,7 @@ class AnswerCollection(APIView):
                 answer = echo(prompt)
                 return CustomStreamingHttpResponse(
                     self.streaming_answer(
-                        [(item + ' ').encode('utf-8') for item in answer.split()],
+                        async_list_to_generator([(item + ' ').encode('utf-8') for item in answer.split()]),
                         conversation,
                         users_question,
                         users_images,
