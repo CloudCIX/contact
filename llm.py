@@ -32,72 +32,6 @@ class PromptRewriteResponse(BaseModel):
     rewritten_question: str
 
 
-PROMPT_REWRITER_SYSTEM = """You are a query rewriter for a RAG (Retrieval-Augmented Generation) system.
-Your sole job is to rewrite the user's question into the best possible search query for document retrieval.
-You do NOT answer the question. You only rewrite it.
-
----
-
-## RULES
-
-### Rule 1: Fix spelling and grammar
-Correct misspellings and typos so the query matches how the information would appear in documents.
-
-Examples:
-- "Who are the councilars of Cork Citty Councel?" → "Who are the councillors of Cork City Council?"
-- "What is the proceedure for planin permision?" → "What is the procedure for planning permission?"
-- "hwo do i aply for social houzing?" → "How do I apply for social housing?"
-
----
-
-### Rule 2: Resolve follow-up questions using chat history
-If the question references something from earlier in the conversation (e.g. "it", "that", "they", "there"),
-replace the pronoun with the actual subject from chat history so the query is self-contained.
-
-Examples:
-- Chat History: "User: What is the Cork City Council budget? Assistant: The Cork City Council budget for
-    2024 is €150 million."
-  Question: "How much is it this year?" → "What is the Cork City Council budget for 2025?"
-
-- Chat History: "User: Who are the councillors of Cork City Council? Assistant: There are 31 councillors."
-  Question: "How are they elected?" → "How are Cork City Council councillors elected?"
-
-- Chat History: "User: What is the planning permission process? Assistant: You must submit a planning application..."
-  Question: "How long does that take?" → "How long does the Cork City Council planning permission process take?"
-
----
-
-### Rule 3: Rephrase for better retrieval
-Rewrite vague, conversational, or poorly structured questions into precise retrieval-friendly queries
-that match the language likely used in official documents, reports, or knowledge bases.
-
-Examples:
-- "tell me about the luas" → "What is the Luas and how does it operate in Dublin?"
-- "Cork roads any news?" → "What are the latest Cork road works or traffic updates?"
-- "is there parking near city hall?" → "Where are the parking facilities near Cork City Hall?"
-- "what does the council actually do?" → "What are the responsibilities and functions of Cork City Council?"
-
----
-
-### Rule 4: Return unchanged if already clear
-If the question is already well-formed, correctly spelled, and retrieval-ready, return it exactly as-is.
-Do not rephrase for the sake of it.
-
-Examples that should be returned unchanged:
-- "What are the opening hours of Cork City Library?"
-- "How do I apply for a Cork City Council housing grant?"
-- "Who is the Lord Mayor of Cork?"
-
----
-
-## IMPORTANT
-- Preserve the original intent exactly. Never change what the user is asking about.
-- Never answer the question.
-- Never add information that wasn't in the question or chat history.
-- Use the chatbot context to understand domain terminology and correct spelling of proper nouns.
-- Output only the rewritten question, nothing else."""
-
-
 PROMPT_REWRITER_USER = """## CHATBOT CONTEXT
 {chatbot_context}
 
@@ -120,26 +54,33 @@ If no rewrite is needed, return it exactly as-is.
 Rewritten Question:"""
 
 
-def create_prompt_rewrite_messages(chat_history, users_question, chatbot_system_prompt='', chatbot_user_prompt=''):
+def create_prompt_rewrite_messages(
+    chat_history,
+    users_question,
+    chatbot_system_prompt='',
+    chatbot_context_prompt='',
+    rewrite_prompt_system='',
+):
     """
     Build rewrite messages for the LLM rewriter.
 
     Args:
         chat_history: String of previous conversation exchanges (empty string if no prior messages)
         users_question: The current user question to rewrite
-        chatbot_system_prompt: System instructions configured by the admin (empty string if not set)
-        chatbot_user_prompt: Knowledge base context/user prompt configured by the admin (empty string if not set)
+        chatbot_system_prompt: System instructions configured by the user (empty string if not set)
+        chatbot_context_prompt: Knowledge base context prompt configured by the user (empty string if not set)
+        rewrite_prompt_system: The prompt to instruct the rewriter LLM
 
     Returns:
         List of message dicts with 'role' and 'content' keys, ready to send to the LLM
     """
-    # Combine system prompt (instructions) and user prompt (knowledge base context)
+    # Combine the chatbot's system prompt and knowledge base context prompt
     # to provide domain awareness to the rewriter
     chatbot_context = ''
     if chatbot_system_prompt:
         chatbot_context += f'{chatbot_system_prompt}\n'
-    if chatbot_user_prompt:
-        chatbot_context += f'{chatbot_user_prompt}'
+    if chatbot_context_prompt:
+        chatbot_context += f'{chatbot_context_prompt}'
 
     user_prompt = PROMPT_REWRITER_USER.format(
         chatbot_context=chatbot_context.strip() or '(This chatbot has no system prompt or domain context configured)',
@@ -148,7 +89,7 @@ def create_prompt_rewrite_messages(chat_history, users_question, chatbot_system_
     )
 
     return [
-        {'role': 'system', 'content': PROMPT_REWRITER_SYSTEM},
+        {'role': 'system', 'content': rewrite_prompt_system},
         {'role': 'user', 'content': user_prompt},
     ]
 

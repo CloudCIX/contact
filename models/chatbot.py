@@ -130,6 +130,7 @@ class Chatbot(BaseModel):
         validators=[MinValueValidator(0), MaxValueValidator(1)],
     )
     reference_limit = models.IntegerField(default=1)
+    maximum_conversation_turn = models.IntegerField(default=0)
     vertical_position = models.CharField(choices=VERTICAL_POSITION_CHOICES, max_length=6, default=BOTTOM)
     vertical_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=2)
     contact_information = models.CharField(max_length=100, null=True)
@@ -138,6 +139,7 @@ class Chatbot(BaseModel):
     reranker = models.CharField(choices=RERANKER_CHOICES, max_length=20, default=MINILM_L_6_v2)
     apply_intent_classification = models.BooleanField(default=False)
     apply_prompt_rewriting = models.BooleanField(default=False)
+    rewrite_prompt = models.CharField(max_length=10000, null=True)
     # Fallback answer if no similar references are retrieved. If not empty and retrieval returns zero chunks,
     # this text will be streamed back instead of calling the LLM.
     no_reference_answer = models.CharField(max_length=1000, default='')

@@ -155,6 +155,12 @@ contact_chatbot_create_167 = (
     'The "apply_prompt_rewriting" parameter is invalid. The "apply_prompt_rewriting" parameter must be a '
     'boolean'
 )
+contact_chatbot_create_169 = (
+    'The "maximum_conversation_turn" parameter is invalid. "maximum_conversation_turn" must be an integer.'
+)
+contact_chatbot_create_170 = (
+    'The "maximum_conversation_turn" parameter is invalid. "maximum_conversation_turn" must be 0 or greater.'
+)
 contact_chatbot_create_201 = 'You do not have permission to make this request. Your Member must be self-managed.'
 
 # Read
@@ -306,6 +312,12 @@ contact_chatbot_update_165 = (
 contact_chatbot_update_166 = (
     'The "apply_safety_classifier" parameter is invalid. The "apply_safety_classifier" parameter must be a '
     'boolean'
+)
+contact_chatbot_update_168 = (
+    'The "maximum_conversation_turn" parameter is invalid. "maximum_conversation_turn" must be an integer.'
+)
+contact_chatbot_update_169 = (
+    'The "maximum_conversation_turn" parameter is invalid. "maximum_conversation_turn" must be 0 or greater.'
 )
 contact_chatbot_update_001 = 'The "pk" path parameter is invalid. "pk" must belong to a valid Chatbot record.'
 # Delete

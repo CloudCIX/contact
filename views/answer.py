@@ -10,6 +10,7 @@ from copy import deepcopy
 # libs
 from adrf.views import APIView
 from cloudcix_rest.exceptions import Http400, Http404
+import requests
 # local
 from contact.intent import Intent, classify_intent
 from contact.llm import (
@@ -44,19 +45,68 @@ async def async_list_to_generator(items):
         yield item
 
 
+URL_PATTERN = re.compile(r"https?://[^\s<>\"'\]\)]+")
+HALLUCINATION_SENTINEL = '[CLOUDCIX_HALLUCINATION_DETECTED]'
+
+
+def _extract_urls(text):
+    if not text:
+        return []
+    return URL_PATTERN.findall(text)
+
+
+def _extract_corpus_urls(api_key, corpus_names):
+    if not corpus_names:
+        return set()
+
+    all_urls = []
+    for corpus_name in corpus_names:
+        url = f'{settings.EMBEDDING_DB_URL}/corpus/{corpus_name}/sources'
+        try:
+            headers = {
+                'Accept': 'application/json',
+            }
+            if api_key:
+                headers['Authorization'] = f'Bearer {api_key}'
+
+            resp = requests.get(url, headers=headers, timeout=10)
+            all_urls.extend(resp.json().get('content', []))
+        except Exception:
+            continue
+
+    urls = set()
+    for url in all_urls:
+        urls.update(_extract_urls(url))
+    return {url for url in urls if url}
+
+
 class AnswerCollection(APIView):
     """
     Request to Answer a Question in a Conversation.
     """
 
     @staticmethod
-    async def streaming_answer(response, conversation, users_question, users_images=[]):
+    async def streaming_answer(
+        response,
+        conversation,
+        users_question,
+        users_images=[],
+        chatbot=None,
+        similar_chunks=None,
+    ):
         logger = logging.getLogger('contact.views.answer.streaming_answer')
         logger.info('Streaming Answer Process Start')
         answer_content = ''
+        answer_text = ''
+        response_is_bytes = False
         try:
             async for ans in response:
                 answer_content += str(ans)
+                if isinstance(ans, (bytes, bytearray)):
+                    response_is_bytes = True
+                    answer_text += ans.decode('utf-8', errors='ignore')
+                else:
+                    answer_text += str(ans)
                 yield ans
                 sys.stdout.flush()
         except ContactExceptionError:
@@ -71,6 +121,29 @@ class AnswerCollection(APIView):
             yield 'An unknown error has occurred, please try again later.'
             sys.stdout.flush()
             return
+
+        if chatbot is not None:
+            corpus_urls = await sync_to_async(_extract_corpus_urls, thread_sensitive=True)(
+                getattr(chatbot, 'api_key', None),
+                getattr(chatbot, 'corpus_names', None),
+            )
+            chunk_urls = set()
+            for chunk in similar_chunks or []:
+                if not chunk:
+                    continue
+                chunk_urls.update(_extract_urls(str(chunk[1])))
+
+            answer_urls = set(_extract_urls(answer_text))
+            missing_urls = [
+                url for url in answer_urls
+                if url not in corpus_urls and url not in chunk_urls
+            ]
+            if missing_urls:
+                if response_is_bytes:
+                    yield HALLUCINATION_SENTINEL.encode('utf-8')
+                else:
+                    yield HALLUCINATION_SENTINEL
+                sys.stdout.flush()
 
         logger.warning('Creating QAndA record after streaming answer.')
         await sync_to_async(QAndA.objects.create, thread_sensitive=True)(
@@ -232,7 +305,8 @@ class AnswerCollection(APIView):
                         )
 
         rewritten_question = users_question
-        if getattr(chatbot, 'apply_prompt_rewriting', False):
+        rewrite_prompt_system = getattr(chatbot, 'rewrite_prompt', '') or ''
+        if getattr(chatbot, 'apply_prompt_rewriting', False) and rewrite_prompt_system:
             with tracer.start_span('rewrite_prompt', child_of=request.span):
                 try:
                     conversation_history = await sync_to_async(
@@ -250,7 +324,8 @@ class AnswerCollection(APIView):
                         conversation_history_str,
                         users_question,
                         chatbot_system_prompt=chatbot.system_prompt or '',
-                        chatbot_user_prompt=chatbot.user_prompt or '',
+                        chatbot_context_prompt=chatbot.user_prompt or '',
+                        rewrite_prompt_system=rewrite_prompt_system,
                     )
                     rewrite_result = await llm_rewrite_prompt(
                         chatbot,
@@ -312,7 +387,7 @@ class AnswerCollection(APIView):
                 conversation,
                 chatbot,
                 top_chunks,
-                rewritten_question,
+                users_question,
                 users_images,
             )
             # Fallback: if there are no similar/reference chunks and chatbot.no_reference_answer is set
@@ -332,7 +407,14 @@ class AnswerCollection(APIView):
                 try:
                     answer = llm(chatbot, prompt)
                     return CustomStreamingHttpResponse(
-                        self.streaming_answer(answer, conversation, users_question, users_images),
+                        self.streaming_answer(
+                            answer,
+                            conversation,
+                            users_question,
+                            users_images,
+                            chatbot=chatbot,
+                            similar_chunks=top_chunks,
+                        ),
                         content_type='text/event-stream; charset=utf-8',
                     )
                 except ContactExceptionError:  # pragma: no cover

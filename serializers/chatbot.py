@@ -102,6 +102,9 @@ class ChatbotSerializer(serpy.Serializer):
     max_tokens:
         description: This parameter controls the maximum number of tokens or words in the generated text.
         type: integer
+    maximum_conversation_turn:
+        description: The maximum number of conversation turns allowed for the Chatbot.
+        type: integer
     member_id:
         description: The ID of the member who owns the Chatbot
         type: integer
@@ -136,6 +139,9 @@ class ChatbotSerializer(serpy.Serializer):
         type: string
     smalltalk_prompt:
         description: The content of the prompt sent to the smalltalk LLM
+        type: string
+    rewrite_prompt:
+        description: The content of the prompt sent to the rewriter LLM
         type: string
     system_prompt:
         description: The content of the item with the role "system" added to the prompt sent to the LLM
@@ -205,6 +211,7 @@ class ChatbotSerializer(serpy.Serializer):
     layout = serpy.Field()
     logo = serpy.Field()
     max_tokens = serpy.Field()
+    maximum_conversation_turn = serpy.Field()
     member_id = serpy.Field()
     name = serpy.Field()
     nn_llm = serpy.Field()
@@ -217,6 +224,7 @@ class ChatbotSerializer(serpy.Serializer):
     similarity = serpy.Field()
     system_prompt = serpy.Field()
     smalltalk_prompt = serpy.Field()
+    rewrite_prompt = serpy.Field()
     temperature = serpy.Field()
     threshold = serpy.Field()
     updated = serpy.Field(attr='updated.isoformat', call=True)

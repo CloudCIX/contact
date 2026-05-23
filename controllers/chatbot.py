@@ -85,6 +85,7 @@ class ChatbotCreateController(ControllerBase):
             'intent_prompt',
             'layout',
             'max_tokens',
+            'maximum_conversation_turn',
             'name',
             'nn_llm',
             'pdf_scraping',
@@ -94,6 +95,7 @@ class ChatbotCreateController(ControllerBase):
             'reranking_limit',
             'similarity',
             'smalltalk_prompt',
+            'rewrite_prompt',
             'system_prompt',
             'temperature',
             'threshold',
@@ -476,6 +478,29 @@ class ChatbotCreateController(ControllerBase):
         self.cleaned_data['max_tokens'] = max_tokens
         return None
 
+    def validate_maximum_conversation_turn(
+        self,
+        maximum_conversation_turn: Optional[int],
+    ) -> Optional[str]:
+        """
+        description: The maximum number of conversation turns allowed.
+        type: integer
+        required: false
+        """
+        if maximum_conversation_turn is None:
+            return None
+
+        try:
+            maximum_conversation_turn = int(maximum_conversation_turn)
+        except (TypeError, ValueError):
+            return 'contact_chatbot_create_169'
+
+        if maximum_conversation_turn < 0:
+            return 'contact_chatbot_create_170'
+
+        self.cleaned_data['maximum_conversation_turn'] = maximum_conversation_turn
+        return None
+
     def validate_name(self, name: Optional[str]) -> Optional[str]:
         """
         description: Name of the Chatbot used to form part of the URL
@@ -590,6 +615,23 @@ class ChatbotCreateController(ControllerBase):
             return 'contact_chatbot_create_148'
 
         self.cleaned_data['similarity'] = similarity
+        return None
+
+    def validate_rewrite_prompt(self, rewrite_prompt: Optional[str]) -> Optional[str]:
+        """
+        description: The content of the prompt sent to the rewriter LLM.
+        type: string
+        required: false
+        """
+        if rewrite_prompt is None:
+            return None
+
+        rewrite_prompt = str(rewrite_prompt).strip()
+
+        if len(rewrite_prompt) > self.get_field('rewrite_prompt').max_length:
+            return 'contact_chatbot_create_168'
+
+        self.cleaned_data['rewrite_prompt'] = rewrite_prompt
         return None
 
     def validate_smalltalk_prompt(self, smalltalk_prompt: Optional[str]) -> Optional[str]:
@@ -831,6 +873,7 @@ class ChatbotUpdateController(ControllerBase):
             'intent_prompt',
             'layout',
             'max_tokens',
+            'maximum_conversation_turn',
             'name',
             'nn_llm',
             'pdf_scraping',
@@ -839,6 +882,7 @@ class ChatbotUpdateController(ControllerBase):
             'reranking_limit',
             'similarity',
             'smalltalk_prompt',
+            'rewrite_prompt',
             'system_prompt',
             'temperature',
             'threshold',
@@ -1222,6 +1266,29 @@ class ChatbotUpdateController(ControllerBase):
         self.cleaned_data['max_tokens'] = max_tokens
         return None
 
+    def validate_maximum_conversation_turn(
+        self,
+        maximum_conversation_turn: Optional[int],
+    ) -> Optional[str]:
+        """
+        description: The maximum number of conversation turns allowed.
+        type: integer
+        required: false
+        """
+        if maximum_conversation_turn is None:
+            return None
+
+        try:
+            maximum_conversation_turn = int(maximum_conversation_turn)
+        except (TypeError, ValueError):
+            return 'contact_chatbot_update_168'
+
+        if maximum_conversation_turn < 0:
+            return 'contact_chatbot_update_169'
+
+        self.cleaned_data['maximum_conversation_turn'] = maximum_conversation_turn
+        return None
+
     def validate_name(self, name: Optional[str]) -> Optional[str]:
         """
         description: Name of the Chatbot
@@ -1335,6 +1402,23 @@ class ChatbotUpdateController(ControllerBase):
             return 'contact_chatbot_update_148'
 
         self.cleaned_data['similarity'] = similarity
+        return None
+
+    def validate_rewrite_prompt(self, rewrite_prompt: Optional[str]) -> Optional[str]:
+        """
+        description: The content of the prompt sent to the rewriter LLM.
+        type: string
+        required: false
+        """
+        if rewrite_prompt is None:
+            rewrite_prompt = ''
+
+        rewrite_prompt = str(rewrite_prompt).strip()
+
+        if len(rewrite_prompt) > self.get_field('rewrite_prompt').max_length:
+            return 'contact_chatbot_update_168'
+
+        self.cleaned_data['rewrite_prompt'] = rewrite_prompt
         return None
 
     def validate_smalltalk_prompt(self, smalltalk_prompt: Optional[str]) -> Optional[str]:
